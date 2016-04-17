@@ -6,6 +6,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string.h>
+#include <errno.h>
 #include "exception.hpp"
 #include "log.h"
 #include "file_distribute.h"
@@ -149,7 +151,8 @@ public:
 public:
 	static int CountDirFiles(const std::string& dir)
 	{
-		DIR* pDir = opendir(dir.c_str());
+		const std::string WORK_DIR = dir + "work/";
+		DIR* pDir = opendir(WORK_DIR.c_str());
 		if ( NULL == pDir )
 		{
 			return -1;
@@ -168,7 +171,7 @@ public:
 			}
 
 			// Skip sub-dir
-			path_name = dir + pDirent->d_name;
+			path_name = WORK_DIR + pDirent->d_name;
 			if ( stat(path_name.c_str(), &fst) != 0 )
 			{
 				return -2;
@@ -186,11 +189,18 @@ public:
 	}
 
 public:
-	virtual void SetDestination(const std::list<std::string>& list_des)
+	virtual void SetDestination(const std::list<std::string>& list_des) throw(Exception)
 	{
 		if ( list_des.empty() )
 		{
 			throw Exception(RW_NO_DESTINATION, "[WRITER] NO Destination!");
+		}
+
+		// Create sub-dir: ./work/ and ./commit/
+		for ( std::list<std::string>::const_iterator c_it = list_des.begin(); c_it != list_des.end(); ++c_it )
+		{
+			TryCreateDir(*c_it+"work/");
+			TryCreateDir(*c_it+"commit/");
 		}
 
 		m_rec.Set(list_des);
@@ -218,19 +228,41 @@ protected:
 		}
 
 		std::size_t pos = old_full_name.rfind('/');
-		std::string new_full_name = des_path + ((pos != std::string::npos) ? old_full_name.substr(pos+1) : old_full_name);
+		std::string file_name = (pos != std::string::npos) ? old_full_name.substr(pos+1) : old_full_name;
+		std::string work_file = des_path + "work/" + file_name;
 
-		if ( rename(old_full_name.c_str(), new_full_name.c_str()) < 0 )
+		if ( rename(old_full_name.c_str(), work_file.c_str()) < 0 )
 		{
-			Log::Instance()->Output("[WRITER] <ERROR> Move file [%s] to [%s] fail!", old_full_name.c_str(), new_full_name.c_str());
+			Log::Instance()->Output("[WRITER] <ERROR> Move file [%s] to [%s] fail! ERROR:%s", old_full_name.c_str(), work_file.c_str(), strerror(errno));
+			return false;
+		}
+
+		std::string link_file = des_path + "commit/" + file_name;
+
+		unlink(link_file.c_str());
+		if ( symlink(work_file.c_str(), link_file.c_str()) != 0 )
+		{
+			Log::Instance()->Output("[WRITER] <ERROR> Link file [%s] fail! ERROR:%s", link_file.c_str(), strerror(errno));
 			return false;
 		}
 
 		if ( FileDistribute::MoreLog() )
 		{
-			Log::Instance()->Output("[WRITER] Move file: [%s] -> [%s]", old_full_name.c_str(), new_full_name.c_str());
+			Log::Instance()->Output("[WRITER] Move file: [%s] -> [%s]", old_full_name.c_str(), work_file.c_str());
 		}
 		return true;
+	}
+
+	void TryCreateDir(const std::string& dir_path) throw(Exception)
+	{
+		// Not existed ?
+		if ( access(dir_path.c_str(), F_OK) != 0 )
+		{
+			if ( mkdir(dir_path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0 )
+			{
+				throw Exception(RW_CREATE_DIR_FAIL, "Try to create dir "+dir_path+" fail! "+std::string(strerror(errno)));
+			}
+		}
 	}
 
 protected:

@@ -4,6 +4,7 @@
 #include "def.h"
 #include "log.h"
 #include "helper.hpp"
+#include "gsignal.h"
 #include "reader.hpp"
 #include "writer.hpp"
 
@@ -77,6 +78,11 @@ void FileDistribute::Init(const std::string& ccm_id, const std::string& str_cfg)
 
 	Log::Instance()->SetPath(m_cfg.GetCfgValue("LOG_PATH", "SYS"));
 	Log::Instance()->Init();
+
+	if ( !GSignal::Init() )
+	{
+		throw Exception(FD_GSIGNAL_INIT_FAIL, "[INIT] [ERROR] GSignal init fail!");
+	}
 
 	_sbMoreLog = m_cfg.GetCfgBoolVal("MORE_LOG", "SYS");
 
@@ -157,7 +163,7 @@ void FileDistribute::Distribute() throw(Exception)
 
 	int get_files = 0;
 	std::list<std::string> list_files;
-	while ( true )
+	while ( GSignal::IsRunning() )
 	{
 		if ( (get_files = m_pReader->GetFiles(list_files)) > 0 )
 		{

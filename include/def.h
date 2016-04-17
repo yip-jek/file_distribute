@@ -15,6 +15,7 @@
 #define FD_PATH_EMPTY                 (2010)
 #define FD_PATH_INVALID               (2011)
 #define FD_NOT_INITIALIZED            (2012)
+#define FD_GSIGNAL_INIT_FAIL          (2013)
 
 #define LE_CCMID_INVALID              (3001)
 #define LE_FILE_PATH_EMPTY            (3002)
@@ -30,6 +31,7 @@
 #define RW_CHANNEL_ID_EMPTY           (4006)
 #define RW_CHANNEL_ID_INVALID         (4007)
 #define RW_CHANNEL_ID_TRANS_FAIL      (4008)
+#define RW_CREATE_DIR_FAIL            (4009)
 
 #endif 
 

@@ -30,6 +30,7 @@ int main(int argc, char* argv[])
 		return -3;
 	}
 
+	Log::Instance()->Output("[MAIN] %s quit!", argv[0]);
 	Log::Release();
 	return 0;
 }

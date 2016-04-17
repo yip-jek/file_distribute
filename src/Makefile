@@ -1,5 +1,11 @@
+ifeq ($(shell uname -s), AIX) # OS-AIX
 CPP = xlC
-CPP_FLAGS = -g -brtl -O2 -q$(shell getconf LONG_BIT)
+CPP_FLAGS = -g -brtl -O2 -q64
+else
+CPP = g++
+CPP_FLAGS = -g -Wall -O2 -m64
+endif
+
 INC = -I../include
 
 des = ../bin/file_distribute
